@@ -1,0 +1,48 @@
+[2023-02-07 10:50:36,632][DEBUG|db_conn.py:23] >> DB URL------------->
+[2023-02-07 10:55:17,927][DEBUG|db_conn.py:24] >> test
+[2023-02-07 10:56:37,516][DEBUG|db_conn.py:24] >> test
+[2023-02-07 11:23:10,402][DEBUG|main.py:21] >> {'DB_HOST': ('127.0.0.1',), 'DB_PORT': ('3306',), 'DB_USER': ('deepface',), 'DB_PASSWORD': ('deepface',), 'DB_DATABASE': 'deepface', 'DB_POOL_RECYCLE': 900, 'DB_ECHO': 'True', 'PROJ_RELOAD': True}
+[2023-02-07 11:29:01,596][DEBUG|main.py:21] >> ('127.0.0.1',)
+[2023-02-07 11:29:20,506][DEBUG|main.py:21] >> ('127.0.0.1',)
+[2023-02-07 11:32:21,832][DEBUG|main.py:21] >> test---> ('127.0.0.1',)
+[2023-02-07 11:33:13,989][DEBUG|main.py:21] >> test---> ()
+[2023-02-07 11:34:07,690][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:34:42,914][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:35:48,386][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:36:47,662][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:37:14,646][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:37:24,852][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:37:58,090][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:38:19,082][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:11,981][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:13,193][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:13,305][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:32,640][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:32,684][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:43,703][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:44,847][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 11:40:44,889][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:13:45,952][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:13:45,953][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:13:46,004][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:13:46,005][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:11,285][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:11,293][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:11,331][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:11,346][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:14,816][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:14,849][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:14,869][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:14,901][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:27,878][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:27,899][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:27,918][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 12:14:27,938][DEBUG|main.py:21] >> test---> 127.0.0.1
+[2023-02-07 14:06:00,569][DEBUG|base.py:23] >> SELECT face.face_sn AS face_face_sn, face.face_embedding AS face_face_embedding, face.nm AS face_nm, face.email AS face_email, face.dept AS face_dept 
+FROM face
+[2023-02-07 14:06:19,149][DEBUG|base.py:23] >> SELECT face.face_sn AS face_face_sn, face.face_embedding AS face_face_embedding, face.nm AS face_nm, face.email AS face_email, face.dept AS face_dept 
+FROM face
+[2023-02-07 14:06:38,765][DEBUG|base.py:23] >> <bound method Query.get of <sqlalchemy.orm.query.Query object at 0x0000024A836A73D0>>
+[2023-02-07 14:07:43,618][DEBUG|base.py:23] >> [<app.routes.base.DeepFace object at 0x0000028E83034A90>, <app.routes.base.DeepFace object at 0x0000028E83035420>]
+[2023-02-07 14:22:57,435][DEBUG|base.py:25] >> [<app.routes.base.DeepFace object at 0x000001D4F0254A90>, <app.routes.base.DeepFace object at 0x000001D4F0255420>]
+[2023-02-07 14:23:43,947][DEBUG|base.py:25] >> [<app.routes.base.DeepFace object at 0x000001F62F134A90>, <app.routes.base.DeepFace object at 0x000001F62F1352A0>]

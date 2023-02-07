@@ -1,0 +1,11 @@
+{
+  "DB": {
+    "DB_HOST": "127.0.0.1",
+    "DB_PORT": "3306",
+    "DB_USER": "deepface",
+    "DB_PASSWORD": "deepface",
+    "DB_DATABASE": "deepface",
+    "DB_POOL_RECYCLE": 3000,
+    "DB_ECHO": "True"
+  }
+}
