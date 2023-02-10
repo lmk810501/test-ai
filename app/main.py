@@ -1,11 +1,11 @@
 from dataclasses import asdict
-from typing import Optional
+
 import uvicorn
 from fastapi import FastAPI
+
 from app.config.database.db_conn import db
 from app.config.env.config import conf
-from app.routes import base, face
-import app.config.logging.log as log
+from app.routers import route_base, route_face
 
 
 def create_app():
@@ -26,8 +26,8 @@ def create_app():
     # 미들웨어 정의
 
     # 라우터 정의
-    fast_api_app.include_router(base.router)
-    fast_api_app.include_router(face.router)
+    fast_api_app.include_router(route_base.router)
+    fast_api_app.include_router(route_face.router)
 
     return fast_api_app
 
