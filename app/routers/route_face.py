@@ -1,99 +1,135 @@
+import base64
+import os
 import time
-from fastapi import APIRouter, Depends
+from io import BytesIO
+
+import cv2
+import numpy as np
+from fastapi import APIRouter, Depends, Request, Form
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from app.config.database.db_conn import db
 from app.config.logging.log import myLogger
-from app.models.model_face import DeepFaceDto, ReqDeepFaceVo, ResDeepFaceVo
-from app.deepface import DeepFace
+from app.models.enums.en_exception_type import EnExceptionType
+from app.models.model_face import DeepFaceDto, ResDeepFaceVo, ReqDeepFaceFileVo, ReqDeepFaceFindVo, ResDeepFaceFindVo
+from app.deepface import CustomDeepFace
 import tensorflow as tf
+from pathlib import Path
 
 router = APIRouter()
 
-tf_version = int(tf.__version__.split('.')[0])
 
-# ------------------------------
+@router.post('/face/find')
+async def face_find(req: Request, reqVo: ReqDeepFaceFindVo = Depends(ReqDeepFaceFindVo.as_form),
+                    session: Session = Depends(db.session)):
+    myLogger.debug('route_face face_find -------------------> start')
+    res = ResDeepFaceFindVo()
+    enResult = EnExceptionType.S0001
+    img = await reqVo.face_img.read()
 
-if tf_version == 2:
-    import logging
+    # img 확장자 추출
+    _, img_ext = os.path.splitext(reqVo.face_img.filename)
 
-    tf.get_logger().setLevel(logging.ERROR)
+    # cv2로 이미지를 읽기 위한 처리
+    img_stream = BytesIO(img)
+    img_array = np.asarray(bytearray(img_stream.read()), dtype=np.uint8)
+    cv2Img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+    df = CustomDeepFace.find(cv2Img, session, enforce_detection=False)
+
+    if len(df) > 0:
+        myLogger.debug('route_face face_find df head-------------------> %s', df.head())
+        res.face_sn = df.iloc[0, 0]
+        res.face_id = df.iloc[0, 1]
+        res.face_nm = df.iloc[0, 2]
+        res.face_email = df.iloc[0, 3]
+        res.face_cosine = str(df.iloc[0, 5])
+    else:
+        enResult = EnExceptionType.E0002
+
+    res.result_code = enResult.code
+    res.result_message = enResult.desc
+
+    result_json = res.dict()
+    result_json['face_sn'] = str(result_json['face_sn'])
+
+    return result_json, 200
 
 
 @router.post('/face/regist')
-async def face_regist(req: ReqDeepFaceVo, session: Session = Depends(db.session)):
-    myLogger.debug('Routes route_face face_regist.py -------------------> start')
-    res = ResDeepFaceVo(result_code='S0001', result_message='등록 성공')
-    myLogger.debug(req.dict())
-    save(req, session)
+async def face_regist(req: Request, reqVo: ReqDeepFaceFileVo = Depends(ReqDeepFaceFileVo.as_form),
+                      session: Session = Depends(db.session)):
+    myLogger.debug('route_Face face_regist -------------------> start')
+    enResult = EnExceptionType.S0001
+    res = ResDeepFaceVo(result_code=enResult.code, result_message=enResult.desc)
+    myLogger.debug('route_Face face_regist------> id = %s, nm = %s, email = %s', reqVo.face_id, reqVo.face_nm,
+                   reqVo.face_email)
+    try:
+        # uploadFile img
+        img = await reqVo.face_img.read()
+        
+        # img 확장자 추출
+        _, img_ext = os.path.splitext(reqVo.face_img.filename)
+        
+        # cv2로 이미지를 읽기 위한 처리
+        img_stream = BytesIO(img)
+        img_array = np.asarray(bytearray(img_stream.read()), dtype=np.uint8)
+        cv2Img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        
+        # img to base64 변경 을 위한 처리
+        _, buffer = cv2.imencode(img_ext, cv2Img)
+        base64_img = base64.b64encode(buffer).decode('utf-8')
+        img_ext = img_ext.replace('.', '')
+        base64_prefix = f"data:image/{img_ext};base64,"
+        base64_img = base64_prefix + base64_img
+        
+        # 얼굴 특징점 추출
+        embedding = get_embedding(cv2Img)
 
-    global graph
+        # 얼굴 특징 점을 찾지 못하면 오류
+        if len(embedding) == 0:
+            myLogger.debug('route_Face face_regist embedding is null------------------->')
+            enResult = EnExceptionType.E0002
+            res.result_code = enResult.code
+            res.result_message = enResult.desc
+            return res, 200
+        
+        # DB저장, 얼굴 특징점 및 이미지 base64 string 드읃ㅇ
+        save(face_id=reqVo.face_id, face_nm=reqVo.face_nm
+             , face_email=reqVo.face_email, face_embedding=embedding
+             , face_img=base64_img, session=session)
 
-    if tf_version == 1:
-        with graph.as_default():
-            resp_obj = representWrapper(req)
-    elif tf_version == 2:
-        resp_obj = representWrapper(req)
+    except Exception as e:
+        myLogger.exception('route_Face face_regist exception-------------------> %s', str(e))
+        enResult = EnExceptionType.E0002
 
-    # --------------------------
+    # save(req, session)
+    myLogger.debug('route_Face face_regist -------------------> end')
 
-    myLogger.debug('Routes route_face face_regist.py -------------------> end')
+    res = ResDeepFaceVo(result_code=enResult.code, result_message=enResult.desc)
 
     return res, 200
 
 
-def save(deepFaceVo: ReqDeepFaceVo, session: Session):
+# 이미지 특징점 추출
+def get_embedding(encoding_img):
+    model_name = 'VGG-Face'
+    detector_backend = 'opencv'
+    return CustomDeepFace.represent(encoding_img
+                                    , model_name=model_name
+                                    , detector_backend=detector_backend
+                                    )
+
+
+# db 저장
+def save(face_id: str, face_nm: str, face_email: str, face_img: str, face_embedding: str, session: Session):
     myLogger.debug('Routes model_face.py -------------------> start')
-    deepface = deepFaceVo.dict()
     deepFaceDto = DeepFaceDto()
-
-    embedding = representWrapper(deepFaceVo)
-    if embedding == '':
-        myLogger.debug('Image is null')
-        return deepFaceDto
-
-    deepFaceDto.face_embedding = embedding  # 추후 DeepFace 연동해서 설정 한다
-    deepFaceDto.face_id = deepface.get('face_id')
-    deepFaceDto.face_nm = deepface.get('face_nm')
-    deepFaceDto.face_email = deepface.get('face_email')
-    deepFaceDto.face_img = deepface.get('face_img')
+    deepFaceDto.face_embedding = str(face_embedding)  # 추후 DeepFace 연동해서 설정 한다
+    deepFaceDto.face_id = face_id
+    deepFaceDto.face_nm = face_nm
+    deepFaceDto.face_email = face_email
+    deepFaceDto.face_img = face_img
     session.add(deepFaceDto)
     session.commit()
     return deepFaceDto
-
-
-def representWrapper(deepFaceVo):
-    model_name = 'VGG-Face'
-    distance_metric = 'cosine'
-    detector_backend = 'opencv'
-
-    # if 'model_name' in list(req.keys()):
-    #     model_name = req['model_name']
-    #
-    # if 'detector_backend' in list(req.keys()):
-    #     detector_backend = req['detector_backend']
-
-    img = deepFaceVo.face_img
-    # if 'img' in list(req.keys()):
-    #     img = req['img']  # list
-
-    validate_img = False
-    if len(img) > 11 and img[0:11] == 'data:image/':
-        validate_img = True
-
-    if not validate_img:
-        print('invalid image passed!')
-        return ''
-
-    # -------------------------------------
-    # call represent function from the interface
-
-    try:
-        embedding = DeepFace.represent(img
-                                       , model_name=model_name
-                                       , detector_backend=detector_backend
-                                       )
-    except Exception as err:
-        print('Exception: ', str(err))
-        return ''
-
-    return embedding

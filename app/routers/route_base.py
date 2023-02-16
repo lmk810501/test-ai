@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
-import app.config.logging.log as log
+from app.config.logging.log import myLogger
 from app.config.database.db_conn import db
-
+from app.models.model_face import DeepFaceDto
 
 router = APIRouter()
 
@@ -29,3 +28,21 @@ async def root(session: Session = Depends(db.session)):
     #
     # return session.query(DeepFaceDto).all()
     return 'hello world'
+
+
+@router.get("/test")
+async def root(session: Session = Depends(db.session)):
+    face = session.query(DeepFaceDto).all()
+    representations = []
+    for f in face:
+        instance = []
+        instance.append(f.face_sn)
+        instance.append(f.face_id)
+        instance.append(f.face_nm)
+        instance.append(f.face_email)
+        instance.append(f.face_img)
+        representation = f.face_embedding
+        instance.append(representation)
+        representations.append(instance)
+        myLogger.debug(instance)
+    return 'test'

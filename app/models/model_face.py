@@ -1,10 +1,63 @@
+from fastapi import UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy import Column, TEXT, BIGINT, VARCHAR
 from typing import Optional
 from app.config.database.db_conn import Base
 from app.models.model_common import ResCommonVo
+from typing import Type
+import inspect
 
 
+def as_form(cls: Type[BaseModel]):
+    new_parameters = []
+
+    for field_name, model_field in cls.__fields__.items():
+        model_field: ModelField  # type: ignore
+        new_parameters.append(
+            inspect.Parameter(
+                model_field.alias,
+                inspect.Parameter.POSITIONAL_ONLY,
+                default=Form(False) if not model_field.required else Form(...),
+                annotation=model_field.outer_type_,
+            )
+        )
+
+    async def as_form_func(**data):
+        return cls(**data)
+
+    sig = inspect.signature(as_form_func)
+    sig = sig.replace(parameters=new_parameters)
+    as_form_func.__signature__ = sig  # type: ignore
+    setattr(cls, 'as_form', as_form_func)
+    return cls
+
+
+'''
+form data 를 받기 위한 VO
+as_form function 필요함
+'''
+@as_form
+class ReqDeepFaceFindVo(BaseModel):
+    face_img: UploadFile
+
+
+'''
+form data 를 받기 위한 VO
+as_form function 필요함
+'''
+@as_form
+class ReqDeepFaceFileVo(BaseModel):
+    face_sn: Optional[int]
+    face_embedding: Optional[str]
+    face_id: str
+    face_nm: str
+    face_email: str
+    face_img: UploadFile
+
+
+'''
+json body data 를 받기 위한 VO
+'''
 class ReqDeepFaceVo(BaseModel):
     face_sn: Optional[int]
     face_embedding: Optional[str]
@@ -14,12 +67,22 @@ class ReqDeepFaceVo(BaseModel):
     face_img: str
 
 
+## Response
 class ResDeepFaceVo(ResCommonVo):
     face_sn: Optional[int]
     face_embedding: Optional[str]
     face_id: Optional[str]
     face_nm: Optional[str]
     face_email: Optional[str]
+
+
+## Response
+class ResDeepFaceFindVo(ResCommonVo):
+    face_sn: Optional[int]
+    face_id: Optional[str]
+    face_nm: Optional[str]
+    face_email: Optional[str]
+    face_cosine: Optional[str]
 
 
 class DeepFaceDto(Base):

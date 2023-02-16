@@ -61,7 +61,7 @@ def build_model(model_name):
 		if model:
 			model = model()
 			model_obj[model_name] = model
-			#print(model_name," built")
+		#print(model_name," built")
 		else:
 			raise ValueError('Invalid model_name passed - {}'.format(model_name))
 
@@ -160,18 +160,18 @@ def verify(img1_path, img2_path = '', model_name = 'VGG-Face', distance_metric =
 
 				#img_path, model_name = 'VGG-Face', model = None, enforce_detection = True, detector_backend = 'mtcnn'
 				img1_representation = represent(img_path = img1_path
-						, model_name = model_name, model = custom_model
-						, enforce_detection = enforce_detection, detector_backend = detector_backend
-						, align = align
-						, normalization = normalization
-						)
+												, model_name = model_name, model = custom_model
+												, enforce_detection = enforce_detection, detector_backend = detector_backend
+												, align = align
+												, normalization = normalization
+												)
 
 				img2_representation = represent(img_path = img2_path
-						, model_name = model_name, model = custom_model
-						, enforce_detection = enforce_detection, detector_backend = detector_backend
-						, align = align
-						, normalization = normalization
-						)
+												, model_name = model_name, model = custom_model
+												, enforce_detection = enforce_detection, detector_backend = detector_backend
+												, align = align
+												, normalization = normalization
+												)
 
 				#----------------------
 				#find distances between embeddings
@@ -246,7 +246,7 @@ def verify(img1_path, img2_path = '', model_name = 'VGG-Face', distance_metric =
 				else:
 					return resp_obj
 
-			#----------------------
+		#----------------------
 
 		else:
 			raise ValueError("Invalid arguments passed to verify function: ", instance)
@@ -321,7 +321,7 @@ def analyze(img_path, actions = ('emotion', 'age', 'gender', 'race') , models = 
 		}
 
 	"""
-	
+
 	if type(actions) == str:
 		actions = (actions,)
 
@@ -582,11 +582,11 @@ def find(img_path, db_path, model_name ='VGG-Face', distance_metric = 'cosine', 
 					custom_model = models[j]
 
 					representation = represent(img_path = employee
-						, model_name = model_name, model = custom_model
-						, enforce_detection = enforce_detection, detector_backend = detector_backend
-						, align = align
-						, normalization = normalization
-						)
+											   , model_name = model_name, model = custom_model
+											   , enforce_detection = enforce_detection, detector_backend = detector_backend
+											   , align = align
+											   , normalization = normalization
+											   )
 
 					instance.append(representation)
 
@@ -626,11 +626,11 @@ def find(img_path, db_path, model_name ='VGG-Face', distance_metric = 'cosine', 
 				custom_model = models[j]
 
 				target_representation = represent(img_path = img_path
-					, model_name = model_name, model = custom_model
-					, enforce_detection = enforce_detection, detector_backend = detector_backend
-					, align = align
-					, normalization = normalization
-					)
+												  , model_name = model_name, model = custom_model
+												  , enforce_detection = enforce_detection, detector_backend = detector_backend
+												  , align = align
+												  , normalization = normalization
+												  )
 
 				for k in metric_names:
 					distances = []
@@ -705,7 +705,7 @@ def find(img_path, db_path, model_name ='VGG-Face', distance_metric = 'cosine', 
 				resp_obj.append(df)
 				df = df_base.copy() #restore df for the next iteration
 
-			#----------------------------------
+		#----------------------------------
 
 		toc = time.time()
 
@@ -755,10 +755,10 @@ def represent(img_path, model_name = 'VGG-Face', model = None, enforce_detection
 
 	#detect and align
 	img = functions.preprocess_face(img = img_path
-		, target_size=(input_shape_y, input_shape_x)
-		, enforce_detection = enforce_detection
-		, detector_backend = detector_backend
-		, align = align)
+									, target_size=(input_shape_y, input_shape_x)
+									, enforce_detection = enforce_detection
+									, detector_backend = detector_backend
+									, align = align)
 
 	#---------------------------------
 	#custom normalization
@@ -808,7 +808,7 @@ def stream(db_path = '', model_name ='VGG-Face', detector_backend = 'opencv', di
 		raise ValueError("frame_threshold must be greater than the value 1 but you passed "+str(frame_threshold))
 
 	realtime.analysis(db_path, model_name, detector_backend, distance_metric, enable_face_analysis
-						, source = source, time_threshold = time_threshold, frame_threshold = frame_threshold)
+					  , source = source, time_threshold = time_threshold, frame_threshold = frame_threshold)
 
 def detectFace(img_path, target_size = (224, 224), detector_backend = 'opencv', enforce_detection = True, align = True):
 
@@ -825,7 +825,7 @@ def detectFace(img_path, target_size = (224, 224), detector_backend = 'opencv', 
 	"""
 
 	img = functions.preprocess_face(img = img_path, target_size = target_size, detector_backend = detector_backend
-		, enforce_detection = enforce_detection, align = align)[0] #preprocess_face returns (1, 224, 224, 3)
+									, enforce_detection = enforce_detection, align = align)[0] #preprocess_face returns (1, 224, 224, 3)
 	return img[:, :, ::-1] #bgr to rgb
 
 #---------------------------
