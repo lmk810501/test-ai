@@ -6,6 +6,7 @@ from app.config.database.db_conn import Base
 from app.models.model_common import ResCommonVo
 from typing import Type
 import inspect
+import pandas as pd
 
 
 def as_form(cls: Type[BaseModel]):
@@ -36,15 +37,20 @@ def as_form(cls: Type[BaseModel]):
 form data 를 받기 위한 VO
 as_form function 필요함
 '''
+
+
 @as_form
 class ReqDeepFaceFindVo(BaseModel):
     face_img: UploadFile
+    face_nm: str
 
 
 '''
 form data 를 받기 위한 VO
 as_form function 필요함
 '''
+
+
 @as_form
 class ReqDeepFaceFileVo(BaseModel):
     face_sn: Optional[int]
@@ -56,8 +62,22 @@ class ReqDeepFaceFileVo(BaseModel):
 
 
 '''
+form data 를 받기 위한 VO
+as_form function 필요함
+'''
+
+
+@as_form
+class ReqDeepFaceDetectVo(BaseModel):
+    img_path: str
+    img: UploadFile
+
+
+'''
 json body data 를 받기 위한 VO
 '''
+
+
 class ReqDeepFaceVo(BaseModel):
     face_sn: Optional[int]
     face_embedding: Optional[str]
@@ -94,3 +114,47 @@ class DeepFaceDto(Base):
     face_nm = Column(VARCHAR, nullable=True)
     face_email = Column(VARCHAR, nullable=True)
     face_img = Column(TEXT, nullable=True)
+
+
+class HistDto(Base):
+    __tablename__ = "hist"
+
+    histSn = Column(BIGINT, nullable=False, autoincrement=True, primary_key=True)
+    face_sn = Column(BIGINT, nullable=False)
+    face_id = Column(VARCHAR, nullable=True)
+    face_nm = Column(VARCHAR, nullable=True)
+    face_email = Column(VARCHAR, nullable=True)
+    req_nm = Column(VARCHAR, nullable=True)
+
+
+class FaceData:
+
+    _instance = None
+    df = pd.DataFrame()
+
+    def __new__(cls) -> 'FaceData':
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    @classmethod
+    def load_data(cls, data) -> None:
+        cls.df = pd.DataFrame(data, columns=["face_sn", "face_id", "face_nm", "face_email", "face_img",'face_embedding'])
+
+    @classmethod
+    def get_data(cls) -> pd.DataFrame:
+        return cls.df
+
+
+
+
+
+
+
+
+
+
+
+
+
+

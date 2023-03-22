@@ -1,7 +1,10 @@
 import ast
 import warnings
 
-from app.models.model_face import DeepFaceDto
+import cv2
+
+from app.models.model_face import DeepFaceDto, FaceData
+from app.config.logging.log import myLogger, detectedSuccessLogger, detectedFailLogger
 
 warnings.filterwarnings("ignore")
 
@@ -10,12 +13,9 @@ import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-import time
-from os import path
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import pickle
 
 from app.deepface.basemodels import VGGFace, OpenFace, Facenet, Facenet512, FbDeepFace, DeepID, DlibWrapper, ArcFace, \
     SFace, Boosting
@@ -33,7 +33,6 @@ if tf_version == 2:
 
 def build_model(model_name):
     global model_obj
-
     models = {
         'VGG-Face': VGGFace.loadModel,
         'OpenFace': OpenFace.loadModel,
@@ -68,8 +67,32 @@ def build_model(model_name):
 def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cosine', model=None,
          enforce_detection=True, detector_backend='opencv', align=True, prog_bar=True, normalization='base',
          silent=False):
+    """
+	This function represents facial images as vectors.
+
+	Parameters:
+		img_path: exact image path, numpy array (BGR) or based64 encoded images could be passed.
+
+		model_name (string): VGG-Face, Facenet, OpenFace, DeepFace, DeepID, Dlib, ArcFace.
+
+		model: Built deepface model. A face recognition model is built every call of verify function. You can pass pre-built face recognition model optionally if you will call verify function several times. Consider to pass model if you are going to call represent function in a for loop.
+
+			model = DeepFace.build_model('VGG-Face')
+
+		enforce_detection (boolean): If any face could not be detected in an image, then verify function will return exception. Set this to False not to have this exception. This might be convenient for low resolution images.
+
+		detector_backend (string): set face detector backend as retinaface, mtcnn, opencv, ssd or dlib
+
+		normalization (string): normalize the input image before feeding to model
+
+	Returns:
+		Represent function returns a multidimensional vector. The number of dimensions is changing based on the reference model. E.g. FaceNet returns 128 dimensional vector; VGG-Face returns 2622 dimensional vector.
+	"""
+
     # 모델 설정 추후 여러가지 테스트 해 봐야함
     # Ensemble 관련 테스트 필요
+    myLogger.debug('CustomDeepFace find start----------------->')
+    myLogger.debug('CustomDeepFace find model build start----------------->')
     if model == None:
 
         if model_name == 'Ensemble':
@@ -92,6 +115,7 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
             models[model_name] = model
 
     # ---------------------------------------
+    myLogger.debug('CustomDeepFace find model build end----------------->')
 
     if model_name == 'Ensemble':
         model_names = ['VGG-Face', 'Facenet', 'OpenFace', 'DeepFace']
@@ -105,25 +129,35 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
     # ---------------------------------------
 
     # 기존에 디렉토리 읽어서 사용하는 부분 DB 사용 하는 걸로 변경
-    representations = []
 
-    faceList = session.query(DeepFaceDto).all()
+    faceData = FaceData()
 
-    pbar = tqdm(range(0, len(faceList)), desc='Finding representations', disable=prog_bar)
+    if faceData.get_data().empty:
+        representations = []
+        faceList = session.query(DeepFaceDto).all()
+        # pbar = tqdm(range(0, len(faceList)), desc='Finding representations', disable=prog_bar)
+        for face in faceList:
+            face_embedding = face.face_embedding
+            face_embedding = ast.literal_eval(face_embedding)
+            data = [face.face_sn, face.face_id, face.face_nm, face.face_email, face.face_img, face_embedding]
+            representations.append(data)
+        faceData.load_data(representations)
 
-    for face in faceList:
-        data = [face.face_sn, face.face_id, face.face_nm, face.face_email, face.face_img, face.face_embedding]
-        representations.append(data)
-
+    embeddingName = ''
     if model_name != 'Ensemble':
-        embeddingName = '{}_representation'.format(model_name)
-        df = pd.DataFrame(representations, columns=["face_sn", "face_id", "face_nm", "face_email", "face_img", embeddingName])
+        # embeddingName = '{}_representation'.format(model_name)
+        embeddingName = 'face_embedding'
+        # df = pd.DataFrame(representations,
+        #                   columns=["face_sn", "face_id", "face_nm", "face_email", "face_img", embeddingName])
+        df = faceData.get_data()
     else:  # ensemble learning
         columns = ['identity']
         [columns.append('%s_representation' % i) for i in model_names]
         df = pd.DataFrame(representations, columns=columns)
 
-    df_base = df.copy()  # df will be filtered in each img. we will restore it for the next item.
+    df_base = df.copy()
+
+    # df will be filtered in each img. we will restore it for the next item.
     resp_obj = []
 
     for j in model_names:
@@ -134,9 +168,13 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
         # call represent function from the interface
 
         try:
-            embedding = represent(findImg
+            embedding = represent(img_path=findImg
                                   , model_name=model_name
+                                  , model=custom_model
+                                  , enforce_detection=enforce_detection
                                   , detector_backend=detector_backend
+                                  , align=align
+                                  , normalization=normalization
                                   )
         except Exception as err:
             print('Exception: ', str(err))
@@ -144,10 +182,9 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
 
         for k in metric_names:
             distances = []
-            for index, instance in df.iterrows():
-                source_representation = instance["%s_representation" % (j)]
-                source_representation = ast.literal_eval(source_representation)
 
+            for index, instance in df.iterrows():
+                source_representation = instance[embeddingName]
 
                 if k == 'cosine':
                     distance = dst.findCosineDistance(source_representation, embedding)
@@ -161,21 +198,22 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
 
             # ---------------------------
 
+
             if model_name == 'Ensemble' and j == 'OpenFace' and k == 'euclidean':
                 continue
             else:
                 df["%s_%s" % (j, k)] = distances
-
                 if model_name != 'Ensemble':
                     threshold = dst.findThreshold(j, k)
-                    df = df.drop(columns=["%s_representation" % (j)])
+                    myLogger.debug('threshold value ----------------------------> %s', threshold)
+                    # df = df.drop(columns=["%s_representation" % (j)])
+                    df = df.drop(columns=[embeddingName])
                     df = df[df["%s_%s" % (j, k)] <= threshold]
 
                     df = df.sort_values(by=["%s_%s" % (j, k)], ascending=True).reset_index(drop=True)
 
                     resp_obj.append(df)
                     df = df_base.copy()  # restore df for the next iteration
-
     # ----------------------------------
 
     if model_name == 'Ensemble':
@@ -227,6 +265,7 @@ def find(findImg=None, session=None, model_name='VGG-Face', distance_metric='cos
 
 def represent(img_path, model_name='VGG-Face', model=None, enforce_detection=True, detector_backend='opencv',
               align=True, normalization='base'):
+
     if model is None:
         model = build_model(model_name)
 
@@ -246,3 +285,31 @@ def represent(img_path, model_name='VGG-Face', model=None, enforce_detection=Tru
         embedding = model.predict(img)[0].tolist()
 
     return embedding
+
+
+def detected_face(img_path, model_name='VGG-Face', model=None, enforce_detection=True, detector_backend='opencv',
+                  align=True, normalization='base'):
+    if model is None:
+        model = build_model(model_name)
+
+    input_shape_x, input_shape_y = functions.find_input_shape(model)
+
+
+    face_img = functions.preprocess_face(img=img_path
+                                    ,target_size=(input_shape_y, input_shape_x)
+                                    ,enforce_detection=enforce_detection
+                                    ,detector_backend=detector_backend
+                                    ,align=align)
+
+
+    img = functions.normalize_input(img=face_img, normalization=normalization)
+
+    return img
+
+
+def load_img(image):
+
+    return functions.load_image(image)
+
+
+functions.initialize_folder()
